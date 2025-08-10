@@ -4,39 +4,32 @@ from telegram.ext import (
     Application,
     CommandHandler,
     MessageHandler,
-    Filters,
-    CallbackContext,
+    filters,
+    ContextTypes,
 )
 from telegram.error import InvalidToken, TelegramError
 
-# Set up logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# Global variable to store the controlled bot's application
 controlled_bot_app = None
 
-# Main bot handlers
-async def start(update: Update, context: CallbackContext) -> None:
-    """Handle the /start command."""
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
-        "Hello! I'm @MyAdminBot. Send me another bot's token using /setbot <token> "
-        "to give it the power to react to all messages in groups/channels where it's added."
+        "Hey cutie! Send me another bot's token using /setbot <token> "
+        "to make it react with 👍 to all messages in groups/channels where it's added."
     )
 
-async def set_bot(update: Update, context: CallbackContext) -> None:
-    """Handle the /setbot command to receive and validate another bot's token."""
+async def set_bot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     global controlled_bot_app
 
-    # Check if the message is in a private chat
     if update.message.chat.type != "private":
-        await update.message.reply_text("Please send the bot token in a private message.")
+        await update.message.reply_text("Please send the bot token in a private chat.")
         return
 
-    # Check if a token was provided
     if not context.args:
         await update.message.reply_text("Usage: /setbot <bot_token>")
         return
@@ -44,47 +37,45 @@ async def set_bot(update: Update, context: CallbackContext) -> None:
     bot_token = context.args[0].strip()
 
     try:
-        # Validate the token by initializing a Bot instance
+        # Validate token by creating a Bot instance
         test_bot = context.bot.__class__(bot_token)
-        await test_bot.get_me()  # Test the token by fetching bot info
+        await test_bot.get_me()
     except InvalidToken:
-        await update.message.reply_text("Invalid bot token. Please check and try again.")
+        await update.message.reply_text("Invalid bot token. Try again, handsome 😉.")
         return
     except TelegramError as e:
         await update.message.reply_text(f"Error validating token: {e}")
         return
 
-    # Stop any existing controlled bot
+    # Stop previous controlled bot if running
     if controlled_bot_app:
         await controlled_bot_app.stop()
         controlled_bot_app = None
 
-    # Initialize the controlled bot
     try:
         controlled_bot_app = Application.builder().token(bot_token).build()
         controlled_bot_app.add_handler(
-            MessageHandler(Filters.all & ~Filters.command, handle_message)
+            MessageHandler(filters.ALL & ~filters.COMMAND, handle_message)
         )
         await controlled_bot_app.initialize()
         await controlled_bot_app.start()
         await controlled_bot_app.updater.start_polling()
+
         await update.message.reply_text(
-            f"Success! The bot {controlled_bot_app.bot.name} is now active and will "
-            "react with 👍 to all messages in groups/channels where it's added. "
-            "Ensure it has admin permissions in channels."
+            f"Success! The bot {controlled_bot_app.bot.name} is active and will react with 👍 "
+            "to all messages in groups/channels where it's added. "
+            "Make sure it has admin rights there!"
         )
     except Exception as e:
         await update.message.reply_text(f"Failed to start the bot: {e}")
 
-async def handle_message(update: Update, context: CallbackContext) -> None:
-    """Handle new messages for the controlled bot and add a reaction."""
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
-        # Try using ReactionTypeEmoji if available
+        # Newer versions support this ReactionTypeEmoji, fallback if missing
         try:
             from telegram import ReactionTypeEmoji
             reaction = [ReactionTypeEmoji("👍")]
         except ImportError:
-            # Fallback for older versions
             reaction = [{"type": "emoji", "emoji": "👍"}]
 
         await context.bot.set_message_reaction(
@@ -93,34 +84,31 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
             reaction=reaction,
             is_big=False
         )
-        logger.info(f"Reacted to message {update.message.message_id} in chat {update.effective_chat.id}")
+        logger.info(f"Reacted with 👍 to message {update.message.message_id} in chat {update.effective_chat.id}")
     except TelegramError as e:
-        logger.error(f"Failed to react to message: {e}")
-        # Notify the main bot's creator in private chat if there's an error
+        logger.error(f"Failed to react: {e}")
         if update.effective_chat.type == "private":
             await context.bot.send_message(
                 chat_id=update.effective_user.id,
-                text=f"Error reacting to message: {e}. Ensure the bot has admin permissions in channels."
+                text=f"Error reacting to message: {e}. Ensure the bot has admin permissions."
             )
 
-async def error_handler(update: Update, context: CallbackContext) -> None:
-    """Handle errors for the main bot."""
+async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.error(f"Update {update} caused error {context.error}")
     if update and update.message:
-        await update.message.reply_text("An error occurred. Please try again or contact support.")
+        await update.message.reply_text("Oops! Something went wrong. Try again or contact support.")
 
-def main() -> None:
-    """Start the main bot."""
-    # Replace with your main bot's token
-    app = Application.builder().token("8214380019:AAEOPG5ZwmzTNAwGf33n1dPyZJxjnyHHWYE").build()
+async def main():
+    # Replace with your main controlling bot token
+    main_bot_token = "8214380019:AAEOPG5ZwmzTNAwGf33n1dPyZJxjnyHHWYE"
+    app = Application.builder().token(main_bot_token).build()
 
-    # Add handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("setbot", set_bot))
     app.add_error_handler(error_handler)
 
-    # Start the bot
-    app.run_polling()
+    await app.run_polling()
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    asyncio.run(main())
