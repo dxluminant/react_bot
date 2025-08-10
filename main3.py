@@ -2,6 +2,7 @@ import telebot
 import json
 import os
 import random
+import threading
 
 MAIN_BOT_TOKEN = "8214380019:AAEOPG5ZwmzTNAwGf33n1dPyZJxjnyHHWYE"
 TOKENS_FILE = "tokens.json"
@@ -78,16 +79,18 @@ def delete_token(message):
     except:
         main_bot.reply_to(message, "⚠️ Please send a valid number.")
 
-@main_bot.channel_post_handler(func=lambda m: True)
-@main_bot.message_handler(func=lambda m: m.chat.type in ["group", "supergroup"])
-def react_any(message):
+def bot_reply(token, chat_id, message_id):
+    try:
+        b = telebot.TeleBot(token)
+        emoji = random.choice(REACTION_POOL)
+        b.send_message(chat_id=chat_id, text=emoji, reply_to_message_id=message_id)
+    except Exception as e:
+        print(f"Error with bot {token}: {e}")
+
+@main_bot.message_handler(func=lambda m: m.chat.type in ["group", "supergroup", "channel"])
+def handle_new_message(message):
     for token in bot_tokens:
-        try:
-            b = telebot.TeleBot(token)
-            emoji = random.choice(REACTION_POOL)
-            b.send_message(chat_id=message.chat.id, text=emoji, reply_to_message_id=message.message_id)
-        except Exception as e:
-            print(f"Error with bot {token}: {e}")
+        threading.Thread(target=bot_reply, args=(token, message.chat.id, message.message_id)).start()
 
 if __name__ == "__main__":
     print("Main bot is running...")
