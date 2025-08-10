@@ -103,7 +103,7 @@ async def error_handler(update: Update, context: CallbackContext) -> None:
 
 def main() -> None:
     """Start the main bot."""
-    app = Application.builder().token("YOUR_MAIN_BOT_TOKEN").build()
+    app = Application.builder().token("8214380019:AAEOPG5ZwmzTNAwGf33n1dPyZJxjnyHHWYE").build()
 
     # Add handlers
     app.add_handler(CommandHandler("start", start))
