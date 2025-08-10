@@ -1,4 +1,7 @@
 import logging
+import nest_asyncio
+import asyncio
+
 from telegram import Update
 from telegram.ext import (
     Application,
@@ -8,6 +11,9 @@ from telegram.ext import (
     ContextTypes,
 )
 from telegram.error import InvalidToken, TelegramError
+
+# Apply nest_asyncio patch for event loop compatibility on platforms like Render
+nest_asyncio.apply()
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -71,7 +77,6 @@ async def set_bot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
-        # Newer versions support this ReactionTypeEmoji, fallback if missing
         try:
             from telegram import ReactionTypeEmoji
             reaction = [ReactionTypeEmoji("👍")]
@@ -110,5 +115,4 @@ async def main():
     await app.run_polling()
 
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+    asyncio.get_event_loop().run_until_complete(main())
