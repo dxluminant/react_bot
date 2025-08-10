@@ -12,7 +12,6 @@ from telegram.ext import (
 )
 from telegram.error import InvalidToken, TelegramError
 
-# Apply nest_asyncio patch for event loop compatibility on platforms like Render
 nest_asyncio.apply()
 
 logging.basicConfig(
@@ -26,7 +25,7 @@ controlled_bot_app = None
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
         "Hey cutie! Send me another bot's token using /setbot <token> "
-        "to make it react with 👍 to all messages in groups/channels where it's added."
+        "to make it send 👍 replies to all messages in groups/channels where it's added."
     )
 
 async def set_bot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -43,7 +42,6 @@ async def set_bot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     bot_token = context.args[0].strip()
 
     try:
-        # Validate token by creating a Bot instance
         test_bot = context.bot.__class__(bot_token)
         await test_bot.get_me()
     except InvalidToken:
@@ -53,7 +51,6 @@ async def set_bot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text(f"Error validating token: {e}")
         return
 
-    # Stop previous controlled bot if running
     if controlled_bot_app:
         await controlled_bot_app.stop()
         controlled_bot_app = None
@@ -68,34 +65,23 @@ async def set_bot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await controlled_bot_app.updater.start_polling()
 
         await update.message.reply_text(
-            f"Success! The bot {controlled_bot_app.bot.name} is active and will react with 👍 "
+            f"Success! The bot {controlled_bot_app.bot.name} is active and will send 👍 replies "
             "to all messages in groups/channels where it's added. "
-            "Make sure it has admin rights there!"
+            "Make sure it has permission to send messages!"
         )
     except Exception as e:
         await update.message.reply_text(f"Failed to start the bot: {e}")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
-        try:
-            from telegram import ReactionTypeEmoji
-            reaction = [ReactionTypeEmoji("👍")]
-        except ImportError:
-            reaction = [{"type": "emoji", "emoji": "👍"}]
-
-        await context.bot.set_message_reaction(
-            chat_id=update.effective_chat.id,
-            message_id=update.message.message_id,
-            reaction=reaction,
-            is_big=False
-        )
-        logger.info(f"Reacted with 👍 to message {update.message.message_id} in chat {update.effective_chat.id}")
+        await update.message.reply_text("👍")
+        logger.info(f"Sent thumbs-up reply to message {update.message.message_id} in chat {update.effective_chat.id}")
     except TelegramError as e:
-        logger.error(f"Failed to react: {e}")
+        logger.error(f"Failed to send thumbs-up reply: {e}")
         if update.effective_chat.type == "private":
             await context.bot.send_message(
                 chat_id=update.effective_user.id,
-                text=f"Error reacting to message: {e}. Ensure the bot has admin permissions."
+                text=f"Error sending thumbs-up reply: {e}. Ensure the bot has permission to send messages."
             )
 
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -104,7 +90,6 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await update.message.reply_text("Oops! Something went wrong. Try again or contact support.")
 
 async def main():
-    # Replace with your main controlling bot token
     main_bot_token = "8214380019:AAEOPG5ZwmzTNAwGf33n1dPyZJxjnyHHWYE"
     app = Application.builder().token(main_bot_token).build()
 
