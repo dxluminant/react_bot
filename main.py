@@ -9,8 +9,15 @@ REACTION_POOL = ["❤️", "😂", "🔥", "😎", "👏", "🎉", "👍", "🤖
 
 def load_tokens():
     if os.path.exists(TOKENS_FILE):
-        with open(TOKENS_FILE, "r") as f:
-            return json.load(f)
+        try:
+            with open(TOKENS_FILE, "r") as f:
+                data = json.load(f)
+                if isinstance(data, list):
+                    return data
+                else:
+                    return []
+        except json.JSONDecodeError:
+            return []
     return []
 
 def save_tokens(tokens):
