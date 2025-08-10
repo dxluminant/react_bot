@@ -1,5 +1,6 @@
+```python
 import logging
-from telegram import Update, ReactionTypeEmoji
+from telegram import Update
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -79,16 +80,24 @@ async def set_bot(update: Update, context: CallbackContext) -> None:
 async def handle_message(update: Update, context: CallbackContext) -> None:
     """Handle new messages for the controlled bot and add a reaction."""
     try:
+        # Try using ReactionTypeEmoji if available
+        try:
+            from telegram import ReactionTypeEmoji
+            reaction = [ReactionTypeEmoji("👍")]
+        except ImportError:
+            # Fallback for older versions
+            reaction = [{"type": "emoji", "emoji": "👍"}]
+
         await context.bot.set_message_reaction(
             chat_id=update.effective_chat.id,
             message_id=update.message.message_id,
-            reaction=[ReactionTypeEmoji("👍")],
+            reaction=reaction,
             is_big=False
         )
         logger.info(f"Reacted to message {update.message.message_id} in chat {update.effective_chat.id}")
     except TelegramError as e:
         logger.error(f"Failed to react to message: {e}")
-        # Optionally notify the main bot's creator in private chat
+        # Notify the main bot's creator in private chat if there's an error
         if update.effective_chat.type == "private":
             await context.bot.send_message(
                 chat_id=update.effective_user.id,
@@ -103,7 +112,8 @@ async def error_handler(update: Update, context: CallbackContext) -> None:
 
 def main() -> None:
     """Start the main bot."""
-    app = Application.builder().token("8214380019:AAEOPG5ZwmzTNAwGf33n1dPyZJxjnyHHWYE").build()
+    # Replace with your main bot's token
+    app = Application.builder().token("YOUR_MAIN_BOT_TOKEN").build()
 
     # Add handlers
     app.add_handler(CommandHandler("start", start))
@@ -115,3 +125,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+```
